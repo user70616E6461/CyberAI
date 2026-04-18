@@ -1,0 +1,13 @@
+llm:
+  provider: openai
+  model: gpt-4o
+  max_tokens: 4096
+  temperature: 0.2
+
+phantom:
+  grid_url: http://127.0.0.1:8080
+  intel_db: ~/.phantom/intel.db
+
+output_dir: reports/
+verbose: false
+timeout: 60

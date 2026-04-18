@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.env
+*.log
+reports/output/
+.DS_Store
+.idea/
+config.yml
+*.json.bak
+.pytest_cache/
+htmlcov/
