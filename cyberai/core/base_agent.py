@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Callable
 from dataclasses import dataclass, field
 from .config import CyberAIConfig
-from .memory import AgentMemory, SharedKnowledgeBase
 from .logger import AuditLogger
 from rich.console import Console
 
@@ -18,7 +17,7 @@ class Tool:
 class BaseAgent(ABC):
     """
     Abstract base class for all CyberAI agents.
-    Each agent: has a role, a tool registry, memory, and access to shared KB.
+    Each agent: has a role, a tool registry, and access to shared KB.
     """
     AGENT_NAME: str = "base"
     ROLE: str = "Generic Agent"
@@ -26,18 +25,12 @@ class BaseAgent(ABC):
     def __init__(
         self,
         config: CyberAIConfig,
-        kb: SharedKnowledgeBase,
         audit: AuditLogger,
         session_id: str = "unknown"
     ):
         self.config = config
-        self.kb = kb
         self.audit = audit
         self.session_id = session_id
-        self.memory = AgentMemory(
-            max_tokens=config.llm.max_tokens,
-            agent_name=self.AGENT_NAME
-        )
         self.tools: Dict[str, Tool] = {}
         self._register_tools()
 

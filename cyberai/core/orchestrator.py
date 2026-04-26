@@ -3,7 +3,6 @@ from rich.panel import Panel
 from rich.table import Table
 from .config import CyberAIConfig
 from .session import PentestSession, SessionState
-from .memory import SharedKnowledgeBase
 from .logger import AuditLogger
 from .llm_client import LLMClient
 
@@ -27,7 +26,6 @@ class Orchestrator:
 
     def __init__(self, config: CyberAIConfig = None):
         self.config = config or CyberAIConfig()
-        self.kb = SharedKnowledgeBase()
         self.session: PentestSession = None
         self.audit: AuditLogger = None
         self.llm = LLMClient(self.config.llm)
