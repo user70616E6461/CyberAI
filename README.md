@@ -1,5 +1,8 @@
 <div align="center">
 
+
+![CI](https://github.com/user70616E6461/CyberAI/actions/workflows/ci.yml/badge.svg) ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+
 # 🤖 CyberAI
 
 **AI-powered pentest orchestration platform**
