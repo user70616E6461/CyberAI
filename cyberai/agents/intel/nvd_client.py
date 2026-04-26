@@ -1,5 +1,4 @@
 import httpx
-import time
 from typing import Dict, Any, List, Optional
 
 NVD_BASE = "https://services.nvd.nist.gov/rest/json/cves/2.0"

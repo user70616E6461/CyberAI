@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Callable
+from typing import Any, Dict, Callable
 from dataclasses import dataclass, field
 from .config import CyberAIConfig
 from .memory import AgentMemory, SharedKnowledgeBase

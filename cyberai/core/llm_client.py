@@ -1,7 +1,6 @@
 from typing import List, Dict, Optional, Any
-from .config import CyberAIConfig, LLMConfig
+from .config import LLMConfig
 import httpx
-import json
 
 class LLMClient:
     """

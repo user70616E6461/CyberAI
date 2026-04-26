@@ -1,4 +1,5 @@
 import json
+from typing import Dict
 from pathlib import Path
 from datetime import datetime
 from cyberai.core.session import PentestSession
@@ -51,7 +52,6 @@ def export_json(session: PentestSession, output_dir: str = "reports/") -> str:
 
 def export_summary(session: PentestSession) -> Dict:
     """Return lightweight summary dict — for CLI display"""
-    from typing import Dict
     return {
         **session.summary(),
         "findings_by_severity": {

@@ -1,5 +1,4 @@
 import subprocess
-import json
 from typing import Dict, Any
 
 def run_nmap(target: str, flags: str = "-sV -T4 --top-ports 1000") -> Dict[str, Any]:
