@@ -1,6 +1,6 @@
 import re
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # Max sizes to prevent context stuffing
 MAX_TARGET_LENGTH = 253

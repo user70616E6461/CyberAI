@@ -1,5 +1,5 @@
-from typing import List, Dict, Optional, Any
-from .injection_detector import scan_messages, detect_injection
+from typing import List, Dict, Optional
+from .injection_detector import scan_messages
 from .input_sanitizer import sanitize_llm_input, validate_json_output, redact_sensitive
 
 class SecurityError(Exception):
@@ -10,7 +10,7 @@ class LLMGuard:
     """
     Security middleware for LLM calls.
     Wraps LLMClient with injection detection + input sanitization.
-    
+
     Usage:
         guard = LLMGuard(llm_client, strict=True)
         response = guard.call(messages, system=system_prompt)

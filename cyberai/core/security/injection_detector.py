@@ -1,10 +1,10 @@
 import re
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List
 
 # Known prompt injection patterns
 INJECTION_PATTERNS = [
     # Role hijacking
-    (r"ignore (all |previous |above |prior )?instructions?", "role_hijack"),
+    (r"ignore.{0,30}instructions?", "role_hijack"),
     (r"disregard (all |your |previous )?instructions?", "role_hijack"),
     (r"forget (everything|all|your instructions)", "role_hijack"),
     (r"you are now (a |an )?(?!assistant|helpful)", "role_hijack"),
