@@ -3,7 +3,6 @@ OOB payload generator — SSRF / XXE / SSTI / RCE templates.
 Each payload embeds a unique interaction_id for phantom-grid tracking.
 """
 from typing import Dict, List
-from .phantom_grid import PhantomGridClient
 
 
 def generate_ssrf_payloads(
