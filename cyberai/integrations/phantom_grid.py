@@ -109,7 +109,7 @@ class PhantomGridClient:
             protocol=raw.get("protocol", "unknown"),
             source_ip=raw.get("source_ip", ""),
             timestamp=raw.get("timestamp",
-                              datetime.utcnow().isoformat()),
+                              datetime.now(datetime.UTC).isoformat()),
             payload=raw.get("payload", ""),
             data=raw.get("data", {}),
         )
