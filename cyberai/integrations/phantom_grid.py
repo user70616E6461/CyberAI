@@ -6,7 +6,7 @@ import httpx
 import uuid
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 
 
@@ -109,7 +109,7 @@ class PhantomGridClient:
             protocol=raw.get("protocol", "unknown"),
             source_ip=raw.get("source_ip", ""),
             timestamp=raw.get("timestamp",
-                              datetime.now(datetime.UTC).isoformat()),
+                              datetime.now(timezone.utc).isoformat()),
             payload=raw.get("payload", ""),
             data=raw.get("data", {}),
         )
