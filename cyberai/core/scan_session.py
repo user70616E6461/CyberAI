@@ -140,7 +140,6 @@ def _now() -> str:
 
 
 def _delta(start: str, end: str) -> float:
-    fmt = "%Y-%m-%dT%H:%M:%S.%f+00:00"
     try:
         t0 = datetime.fromisoformat(start)
         t1 = datetime.fromisoformat(end)
