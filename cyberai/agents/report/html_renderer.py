@@ -32,17 +32,20 @@ def render_html_report(
     chain        = _get_chain(kb)
     ai_analysis  = _get_ai_analysis(kb)
 
-    html = template.format(
-        target           = session_summary.get("target", ""),
-        session_id       = session_summary.get("session_id", ""),
-        generated_at     = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-        state            = session_summary.get("state", ""),
-        duration_s       = session_summary.get("duration_s", ""),
-        phases_html      = _render_phases(session_summary.get("phases", [])),
-        attack_paths_html= _render_attack_paths(attack_paths),
-        chain_html       = _render_chain(chain),
-        ai_analysis      = _escape(ai_analysis),
-    )
+    replacements = {
+        "{target}":            _escape(session_summary.get("target", "")),
+        "{session_id}":        session_summary.get("session_id", ""),
+        "{generated_at}":      datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        "{state}":             session_summary.get("state", ""),
+        "{duration_s}":        str(session_summary.get("duration_s", "")),
+        "{phases_html}":       _render_phases(session_summary.get("phases", [])),
+        "{attack_paths_html}": _render_attack_paths(attack_paths),
+        "{chain_html}":        _render_chain(chain),
+        "{ai_analysis}":       _escape(ai_analysis),
+    }
+    html = template
+    for key, val in replacements.items():
+        html = html.replace(key, val)
 
     Path(output_path).write_text(html, encoding="utf-8")
     return output_path
