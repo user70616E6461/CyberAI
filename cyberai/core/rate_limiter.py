@@ -5,7 +5,7 @@ NVD allows 5 req/30s without API key, 50 req/30s with key.
 from __future__ import annotations
 import time
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 
