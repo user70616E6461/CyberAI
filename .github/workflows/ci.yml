@@ -11,11 +11,12 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
 
-    # The coverage upload authenticates as this job rather than with a stored
-    # secret, the way the release workflow already publishes to PyPI.
+    # The coverage upload authenticates with a stored secret for the length
+    # of one experiment. id-token: write is not requested while it does,
+    # because a permission with nothing reading it is a claim about how this
+    # job works that stopped being true.
     permissions:
       contents: read
-      id-token: write
 
     strategy:
       matrix:
@@ -71,7 +72,14 @@ jobs:
         uses: codecov/codecov-action@v7
         with:
           files: ./coverage.xml
-          use_oidc: true
+          # Separating experiment, not a preference. Every head commit of a
+          # pull request is recorded on branch main although --branch is sent,
+          # and codecov/project has arrived on none of them. How the upload
+          # authenticates is the one untried difference, so the token path
+          # runs once to tell "the OIDC path loses the branch" apart from
+          # "the service ignores what was sent". Reverting to use_oidc: true
+          # is the answer to either outcome except one.
+          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
           # These two values are the same facts taken from the event payload
           # instead of guessed from the checkout. The reason first written

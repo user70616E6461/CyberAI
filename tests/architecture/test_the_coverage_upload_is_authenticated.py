@@ -8,11 +8,23 @@ a check that decides nothing, which codecov.yml already argues against in
 prose.
 
 Two things fix it and only one of them lives here. Authenticating the upload
-does: the action requests an OIDC token from the workflow's own identity, the
-way release.yml already publishes to PyPI, so there is no secret to rotate
-and no tokenless guess. Installing the Codecov GitHub App does not -- it is
-an account-level setting, it cannot be asserted from a checkout, and the note
-is here because this is where the next person looks.
+does, and there are two means of doing it: an OIDC token minted from the
+workflow's own identity, the way release.yml publishes to PyPI, or an upload
+token kept as a repository secret. Installing the Codecov GitHub App does not
+-- it is an account-level setting, it cannot be asserted from a checkout, and
+the note is here because this is where the next person looks.
+
+Which of the two means is in use right now is an experiment rather than a
+preference. OIDC was chosen in day 29 and nothing has been found wrong with
+it. What is wrong is downstream: the head commit of every pull request is
+recorded on branch main although --branch is sent, and codecov/project has
+arrived on none of them. How the upload authenticates is the one difference
+between this repository and a working one that has not been varied, so the
+token path is run once to separate "the OIDC path loses the branch" from
+"the service ignores what the client sent". A correctly recorded branch under
+a token puts the answer here; an incorrectly recorded one puts it with the
+service, and the facts are then complete enough to file. OIDC returns either
+way unless the token is what makes the status arrive.
 
 fail_ci_if_error is on deliberately. It means a Codecov outage reds this job
 and, with the required checks on main, blocks merges until it clears. That is
@@ -116,11 +128,33 @@ def test_the_upload_is_a_version_that_can_authenticate() -> None:
         assert major >= _MINIMUM_MAJOR, f"{name} pins {ref}"
 
 
-def test_the_upload_identifies_itself() -> None:
-    """Without this the report is accepted on trust or not at all."""
+def test_the_upload_identifies_itself_by_one_means_and_asks_for_that_one() -> None:
+    """Without this the report is accepted on trust or not at all.
+
+    Two means are allowed because the repository is running an experiment
+    between them, and the shape that has to hold across the swap is that the
+    job asks for exactly what its means needs. OIDC needs id-token: write and
+    a stored token does not, so leaving the permission behind after a swap
+    would be a job declaring an identity nothing reads -- which is how the
+    comment in ci.yml came to describe an upload that no longer worked that
+    way. Both means at once is not belt and braces either: the action would
+    pick one and the file would stop saying which.
+    """
     for name, job, step in _uploads():
-        assert step["with"]["use_oidc"] is True, name
-        assert job["permissions"]["id-token"] == "write", name
+        supplied = step["with"]
+        means = [key for key in ("use_oidc", "token") if key in supplied]
+        assert len(means) == 1, f"{name} authenticates by {means or 'nothing'}"
+        granted = (job.get("permissions") or {}).get("id-token")
+        if means == ["use_oidc"]:
+            assert supplied["use_oidc"] is True, name
+            assert granted == "write", f"{name} mints no token it can use"
+        else:
+            assert "secrets.CODECOV_TOKEN" in str(supplied["token"]), (
+                f"{name} carries a token that is not the repository secret"
+            )
+            assert granted is None, (
+                f"{name} still asks for id-token: {granted!r} with nothing reading it"
+            )
 
 
 def test_a_failed_upload_is_visible() -> None:
