@@ -1,7 +1,20 @@
 # Typing scope
 
 `mypy --strict` reads 95 of 170 modules in the package. The other 75 hold 289
-errors and are not checked. Both numbers are measured, not chosen, and they
+errors and are not checked.
+
+Not checked is stronger than it sounds, and the boundary is the reason. Of
+the 95 modules in the scope, 19 import a module outside it at module level,
+and between them they reach 26 such modules. mypy follows those imports to
+resolve names and does not report what it finds there: measured by appending
+an unannotated function to `cyberai/core/config.py`, which is outside the
+scope and imported from inside it, running with a cold cache, and getting
+`Success: no issues found in 95 source files` all the same. So a name
+crossing the boundary is typed by a module nothing checks, and adding a
+module to the scope costs its import closure rather than its own error count
+-- `mypy` on three single-error modules alone reports 90 errors across 26
+files. The crossing is measured on every run by the test named below, which
+reds when either count moves, so the paragraph cannot drift away from it. Both numbers are measured, not chosen, and they
 are measured on the runner: the typecheck job prints them on every run.
 
 Four modules were carried into the scope rather than found there. The call at
