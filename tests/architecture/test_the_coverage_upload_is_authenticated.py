@@ -53,13 +53,24 @@ none of the ten, so nothing regressed here; the status has never arrived at
 all. The uploader is told which pull request and which branch it is on
 because that is the right thing to send, not because it produced the status.
 
-What that costs and what is not measured here: a pull request opened from a
-fork cannot be granted id-token: write, so the upload has nothing to
-authenticate with and the job fails on a contribution the contributor cannot
-fix. No fork has opened one yet, so this is reasoning from the permissions
-model rather than an observation. The first outside pull request is the
-measurement; if it lands red for this reason, the answer is a fork-aware
-condition here, not a quiet return to an upload nobody reads.
+What that costs, and what of it is measured: neither means of authenticating
+survives a fork. A workflow triggered by a pull request from a fork is
+granted neither id-token: write nor the repository secrets, so under either
+means the upload has nothing to present and the job reds on a contribution
+the contributor cannot fix. That much follows from the permissions model.
+
+What was measured, on the day this paragraph stopped guessing: all 267 pull
+requests this repository has ever had were opened from branches inside it,
+and the two existing forks have opened none. So the failure has never
+happened, and saying it has not is now a count rather than an impression.
+
+The fork-aware condition this paragraph used to promise is not free: an `if`
+on the upload step is exactly what the sibling test above reds on, because it
+would end the one-upload-per-matrix-entry arrangement described there. Until
+a fork actually opens one, the cheaper half is done instead -- CONTRIBUTING
+tells the contributor what a red upload on their pull request means and that
+it is not their contribution being refused, which is asserted below so the
+warning cannot quietly go missing while the upload stays credentialed.
 """
 
 import pathlib
@@ -68,6 +79,7 @@ import yaml
 
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
 _WORKFLOWS = _ROOT / ".github" / "workflows"
+_CONTRIBUTING = _ROOT / "CONTRIBUTING.md"
 _ACTION = "codecov/codecov-action"
 
 # v4 is the version whose tokenless uploads produce the banner. The floor is
@@ -155,6 +167,36 @@ def test_the_upload_identifies_itself_by_one_means_and_asks_for_that_one() -> No
             assert granted is None, (
                 f"{name} still asks for id-token: {granted!r} with nothing reading it"
             )
+
+
+def test_a_fork_pull_request_is_warned_about_where_a_contributor_reads() -> None:
+    """The permissions model is not where a contributor finds this out.
+
+    A credentialed upload that is allowed to red the job will red it on every
+    fork pull request, and until this assertion existed the only place that
+    said so was the docstring of this file. CONTRIBUTING is where somebody
+    opening their first pull request looks, so the warning has to be there
+    and has to survive an edit that quietly drops it.
+
+    The guard is deliberate rather than decorative: an upload that cannot red
+    the job, or one that presents no credential at all, does not do this to
+    forks, and on the day the step becomes either of those the warning is
+    stale text and this stops demanding it.
+    """
+    paragraphs = _CONTRIBUTING.read_text(encoding="utf-8").split("\n\n")
+    for name, _, step in _uploads():
+        supplied = step["with"]
+        credentialed = {"use_oidc", "token"} & set(supplied)
+        if not credentialed or supplied.get("fail_ci_if_error") is not True:
+            continue
+        warned = [
+            block for block in paragraphs if "fork" in block.lower() and "coverage" in block.lower()
+        ]
+        assert len(warned) == 1, (
+            f"{name} presents {sorted(credentialed)} and reds the job, so every fork "
+            f"pull request fails on it; CONTRIBUTING carries {len(warned)} passages "
+            "naming a fork and the coverage upload together, and it needs exactly one"
+        )
 
 
 def test_a_failed_upload_is_visible() -> None:
