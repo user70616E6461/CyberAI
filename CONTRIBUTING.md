@@ -28,6 +28,15 @@ fix(scope): bug fix
 docs: documentation
 test(scope): tests
 
+## Pull requests from a fork
+
+The Run Tests job uploads a coverage report, and it authenticates with a
+credential GitHub withholds from a workflow triggered by a pull request from
+a fork. That step can go red on your pull request through nothing you did and
+nothing you can change from your side. It is the upload failing, not the
+contribution being rejected: say so in the pull request and the maintainer
+re-runs it from a branch that carries the credential.
+
 ## Contributor License Agreement
 
 This project requires a signed CLA before a pull request can be merged.

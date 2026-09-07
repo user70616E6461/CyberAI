@@ -8,11 +8,23 @@ a check that decides nothing, which codecov.yml already argues against in
 prose.
 
 Two things fix it and only one of them lives here. Authenticating the upload
-does: the action requests an OIDC token from the workflow's own identity, the
-way release.yml already publishes to PyPI, so there is no secret to rotate
-and no tokenless guess. Installing the Codecov GitHub App does not -- it is
-an account-level setting, it cannot be asserted from a checkout, and the note
-is here because this is where the next person looks.
+does, and there are two means of doing it: an OIDC token minted from the
+workflow's own identity, the way release.yml publishes to PyPI, or an upload
+token kept as a repository secret. Installing the Codecov GitHub App does not
+-- it is an account-level setting, it cannot be asserted from a checkout, and
+the note is here because this is where the next person looks.
+
+Which of the two means is in use right now is an experiment rather than a
+preference. OIDC was chosen in day 29 and nothing has been found wrong with
+it. What is wrong is downstream: the head commit of every pull request is
+recorded on branch main although --branch is sent, and codecov/project has
+arrived on none of them. How the upload authenticates is the one difference
+between this repository and a working one that has not been varied, so the
+token path is run once to separate "the OIDC path loses the branch" from
+"the service ignores what the client sent". A correctly recorded branch under
+a token puts the answer here; an incorrectly recorded one puts it with the
+service, and the facts are then complete enough to file. OIDC returns either
+way unless the token is what makes the status arrive.
 
 fail_ci_if_error is on deliberately. It means a Codecov outage reds this job
 and, with the required checks on main, blocks merges until it clears. That is
@@ -27,21 +39,38 @@ depth zero landed in day 32 and the next commit still had patch and no
 project. The depth is still asserted below, because a full fetch is what
 Codecov documents and that is true regardless of which guess was right.
 
-What is measured about the missing status: on bcc4282 the commit is recorded
-on branch main with pullid null, pull 266 carries head null and compared_to
-null, and codecov knows every branch by name. patch is computed from the diff
-with the parent and arrives; project compares against a base the pull request
-never got, so there is nothing to send. The uploader is therefore told which
-pull request and which branch it is on rather than left to detect them, and
-whether that produces the status is the open measurement, not a claim.
+What is measured about the missing status, and what was withdrawn: this
+paragraph used to report pullid, head and compared_to as null. The Codecov
+API has no such fields, so those were .get() calls on absent keys rather than
+readings, and the conclusion drawn from them -- that project had no base and
+so had nothing to send -- goes with them. What survives being asked with keys
+that exist: codecov knows every branch by name, the uploader sends --pr and
+--branch, the commit is still recorded on branch main, and the pull request
+carries both base and head totals, so a base is there. patch is computed from
+the diff with the parent and arrives as a check-run. Across the heads of pull
+requests 258 to 267 patch appears from 261 onwards and project appears on
+none of the ten, so nothing regressed here; the status has never arrived at
+all. The uploader is told which pull request and which branch it is on
+because that is the right thing to send, not because it produced the status.
 
-What that costs and what is not measured here: a pull request opened from a
-fork cannot be granted id-token: write, so the upload has nothing to
-authenticate with and the job fails on a contribution the contributor cannot
-fix. No fork has opened one yet, so this is reasoning from the permissions
-model rather than an observation. The first outside pull request is the
-measurement; if it lands red for this reason, the answer is a fork-aware
-condition here, not a quiet return to an upload nobody reads.
+What that costs, and what of it is measured: neither means of authenticating
+survives a fork. A workflow triggered by a pull request from a fork is
+granted neither id-token: write nor the repository secrets, so under either
+means the upload has nothing to present and the job reds on a contribution
+the contributor cannot fix. That much follows from the permissions model.
+
+What was measured, on the day this paragraph stopped guessing: all 267 pull
+requests this repository has ever had were opened from branches inside it,
+and the two existing forks have opened none. So the failure has never
+happened, and saying it has not is now a count rather than an impression.
+
+The fork-aware condition this paragraph used to promise is not free: an `if`
+on the upload step is exactly what the sibling test above reds on, because it
+would end the one-upload-per-matrix-entry arrangement described there. Until
+a fork actually opens one, the cheaper half is done instead -- CONTRIBUTING
+tells the contributor what a red upload on their pull request means and that
+it is not their contribution being refused, which is asserted below so the
+warning cannot quietly go missing while the upload stays credentialed.
 """
 
 import pathlib
@@ -50,6 +79,7 @@ import yaml
 
 _ROOT = pathlib.Path(__file__).resolve().parents[2]
 _WORKFLOWS = _ROOT / ".github" / "workflows"
+_CONTRIBUTING = _ROOT / "CONTRIBUTING.md"
 _ACTION = "codecov/codecov-action"
 
 # v4 is the version whose tokenless uploads produce the banner. The floor is
@@ -110,11 +140,63 @@ def test_the_upload_is_a_version_that_can_authenticate() -> None:
         assert major >= _MINIMUM_MAJOR, f"{name} pins {ref}"
 
 
-def test_the_upload_identifies_itself() -> None:
-    """Without this the report is accepted on trust or not at all."""
+def test_the_upload_identifies_itself_by_one_means_and_asks_for_that_one() -> None:
+    """Without this the report is accepted on trust or not at all.
+
+    Two means are allowed because the repository is running an experiment
+    between them, and the shape that has to hold across the swap is that the
+    job asks for exactly what its means needs. OIDC needs id-token: write and
+    a stored token does not, so leaving the permission behind after a swap
+    would be a job declaring an identity nothing reads -- which is how the
+    comment in ci.yml came to describe an upload that no longer worked that
+    way. Both means at once is not belt and braces either: the action would
+    pick one and the file would stop saying which.
+    """
     for name, job, step in _uploads():
-        assert step["with"]["use_oidc"] is True, name
-        assert job["permissions"]["id-token"] == "write", name
+        supplied = step["with"]
+        means = [key for key in ("use_oidc", "token") if key in supplied]
+        assert len(means) == 1, f"{name} authenticates by {means or 'nothing'}"
+        granted = (job.get("permissions") or {}).get("id-token")
+        if means == ["use_oidc"]:
+            assert supplied["use_oidc"] is True, name
+            assert granted == "write", f"{name} mints no token it can use"
+        else:
+            assert "secrets.CODECOV_TOKEN" in str(supplied["token"]), (
+                f"{name} carries a token that is not the repository secret"
+            )
+            assert granted is None, (
+                f"{name} still asks for id-token: {granted!r} with nothing reading it"
+            )
+
+
+def test_a_fork_pull_request_is_warned_about_where_a_contributor_reads() -> None:
+    """The permissions model is not where a contributor finds this out.
+
+    A credentialed upload that is allowed to red the job will red it on every
+    fork pull request, and until this assertion existed the only place that
+    said so was the docstring of this file. CONTRIBUTING is where somebody
+    opening their first pull request looks, so the warning has to be there
+    and has to survive an edit that quietly drops it.
+
+    The guard is deliberate rather than decorative: an upload that cannot red
+    the job, or one that presents no credential at all, does not do this to
+    forks, and on the day the step becomes either of those the warning is
+    stale text and this stops demanding it.
+    """
+    paragraphs = _CONTRIBUTING.read_text(encoding="utf-8").split("\n\n")
+    for name, _, step in _uploads():
+        supplied = step["with"]
+        credentialed = {"use_oidc", "token"} & set(supplied)
+        if not credentialed or supplied.get("fail_ci_if_error") is not True:
+            continue
+        warned = [
+            block for block in paragraphs if "fork" in block.lower() and "coverage" in block.lower()
+        ]
+        assert len(warned) == 1, (
+            f"{name} presents {sorted(credentialed)} and reds the job, so every fork "
+            f"pull request fails on it; CONTRIBUTING carries {len(warned)} passages "
+            "naming a fork and the coverage upload together, and it needs exactly one"
+        )
 
 
 def test_a_failed_upload_is_visible() -> None:
@@ -147,8 +229,10 @@ def test_the_upload_names_the_pull_request_and_the_branch() -> None:
 
     The two overrides read the same facts out of the event payload: the pull
     request number, empty on a push, and the head branch falling back to the
-    pushed ref. This asserts they are supplied, not that supplying them fixes
-    the status -- that is the measurement the change exists to take.
+    pushed ref. This asserts they are supplied, and that is all it ever
+    asserted: the measurement it existed to take has since been taken on
+    a86dc32 and the status did not appear. They stay because sending the
+    pull request you are on is right on its own.
     """
     for name, _, step in _uploads():
         supplied = step["with"]
