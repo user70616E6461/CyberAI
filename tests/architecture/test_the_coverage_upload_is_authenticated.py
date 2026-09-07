@@ -27,13 +27,19 @@ depth zero landed in day 32 and the next commit still had patch and no
 project. The depth is still asserted below, because a full fetch is what
 Codecov documents and that is true regardless of which guess was right.
 
-What is measured about the missing status: on bcc4282 the commit is recorded
-on branch main with pullid null, pull 266 carries head null and compared_to
-null, and codecov knows every branch by name. patch is computed from the diff
-with the parent and arrives; project compares against a base the pull request
-never got, so there is nothing to send. The uploader is therefore told which
-pull request and which branch it is on rather than left to detect them, and
-whether that produces the status is the open measurement, not a claim.
+What is measured about the missing status, and what was withdrawn: this
+paragraph used to report pullid, head and compared_to as null. The Codecov
+API has no such fields, so those were .get() calls on absent keys rather than
+readings, and the conclusion drawn from them -- that project had no base and
+so had nothing to send -- goes with them. What survives being asked with keys
+that exist: codecov knows every branch by name, the uploader sends --pr and
+--branch, the commit is still recorded on branch main, and the pull request
+carries both base and head totals, so a base is there. patch is computed from
+the diff with the parent and arrives as a check-run. Across the heads of pull
+requests 258 to 267 patch appears from 261 onwards and project appears on
+none of the ten, so nothing regressed here; the status has never arrived at
+all. The uploader is told which pull request and which branch it is on
+because that is the right thing to send, not because it produced the status.
 
 What that costs and what is not measured here: a pull request opened from a
 fork cannot be granted id-token: write, so the upload has nothing to
@@ -147,8 +153,10 @@ def test_the_upload_names_the_pull_request_and_the_branch() -> None:
 
     The two overrides read the same facts out of the event payload: the pull
     request number, empty on a push, and the head branch falling back to the
-    pushed ref. This asserts they are supplied, not that supplying them fixes
-    the status -- that is the measurement the change exists to take.
+    pushed ref. This asserts they are supplied, and that is all it ever
+    asserted: the measurement it existed to take has since been taken on
+    a86dc32 and the status did not appear. They stay because sending the
+    pull request you are on is right on its own.
     """
     for name, _, step in _uploads():
         supplied = step["with"]

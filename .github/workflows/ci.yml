@@ -73,12 +73,15 @@ jobs:
           files: ./coverage.xml
           use_oidc: true
           fail_ci_if_error: true
-          # Auto-detection files every report on branch main with no pull
-          # request attached, so the project status has no base to compare
-          # against and is never sent. Measured on bcc4282: patch arrived,
-          # project did not, the commit was recorded on main and pull 266 had
-          # head and compared_to null. These two values are the same facts
-          # taken from the event payload instead of guessed from the checkout.
+          # These two values are the same facts taken from the event payload
+          # instead of guessed from the checkout. The reason first written
+          # here -- that auto-detection left the project status with no base
+          # to compare against -- was read off keys the Codecov API does not
+          # have, and is withdrawn. Measured on a86dc32 once they landed: the
+          # action accepts both inputs, the uploader sends --pr and --branch,
+          # the commit is still recorded on branch main, and the pull request
+          # carries both base and head totals. Naming the pull request is
+          # right either way; it is not the repair it was offered as.
           override_pr: ${{ github.event.pull_request.number }}
           override_branch: ${{ github.head_ref || github.ref_name }}
 
