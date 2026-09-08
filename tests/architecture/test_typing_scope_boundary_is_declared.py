@@ -27,8 +27,8 @@ _ROOT = pathlib.Path(__file__).resolve().parents[2]
 _PACKAGE = _ROOT / "cyberai"
 
 # Measured on the day this file was written, with the method below.
-_EXPECTED_CROSSERS = 19
-_EXPECTED_REACHED = 26
+_EXPECTED_CROSSERS = 21
+_EXPECTED_REACHED = 28
 
 
 def _scope() -> set[pathlib.Path]:
@@ -89,7 +89,7 @@ def _crossings() -> tuple[set[pathlib.Path], set[pathlib.Path]]:
 
 def test_the_scope_covers_the_modules_it_declares() -> None:
     """The premise the rest of this file argues about."""
-    assert len(_scope()) == 95
+    assert len(_scope()) == 97
     assert len(list(_PACKAGE.rglob("*.py"))) == 170
 
 

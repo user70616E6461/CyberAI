@@ -147,6 +147,8 @@ files = [
     "cyberai/cli/__init__.py",
     "cyberai/cli/replay.py",
     "cyberai/cli/bench.py",
+    "cyberai/cli/mcp_scan.py",
+    "cyberai/cli/web3_audit.py",
     "cyberai/core/__init__.py",
     "cyberai/core/cost_tracker.py",
     "cyberai/core/egress_guard.py",

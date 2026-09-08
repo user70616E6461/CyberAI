@@ -3,7 +3,7 @@ import logging
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from rich.console import Console
 from rich.logging import RichHandler
@@ -14,7 +14,7 @@ console = Console()
 
 
 def get_logger(
-    name: str, log_file: str = None, signer: Optional[SessionSigner] = None
+    name: str, log_file: Optional[str] = None, signer: Optional[SessionSigner] = None
 ) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -76,12 +76,12 @@ class AuditLogger:
     def __init__(
         self,
         session_id: str,
-        output_dir: str = "reports/",
+        output_dir: Union[str, Path] = Path("reports/"),
         db_path: Optional[str] = None,
     ):
-        log_path = f"{output_dir}/audit_{session_id}.jsonl"
+        log_path = Path(output_dir) / f"audit_{session_id}.jsonl"
         self.signer = SessionSigner()
-        self.logger = get_logger(f"cyberai.audit.{session_id}", log_path, signer=self.signer)
+        self.logger = get_logger(f"cyberai.audit.{session_id}", str(log_path), signer=self.signer)
         self.session_id = session_id
         self.db_path = db_path
         if db_path:

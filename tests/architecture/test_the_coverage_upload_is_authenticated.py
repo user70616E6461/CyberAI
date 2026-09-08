@@ -14,17 +14,20 @@ token kept as a repository secret. Installing the Codecov GitHub App does not
 -- it is an account-level setting, it cannot be asserted from a checkout, and
 the note is here because this is where the next person looks.
 
-Which of the two means is in use right now is an experiment rather than a
-preference. OIDC was chosen in day 29 and nothing has been found wrong with
-it. What is wrong is downstream: the head commit of every pull request is
-recorded on branch main although --branch is sent, and codecov/project has
-arrived on none of them. How the upload authenticates is the one difference
-between this repository and a working one that has not been varied, so the
-token path is run once to separate "the OIDC path loses the branch" from
-"the service ignores what the client sent". A correctly recorded branch under
-a token puts the answer here; an incorrectly recorded one puts it with the
-service, and the facts are then complete enough to file. OIDC returns either
-way unless the token is what makes the status arrive.
+Which of the two means is in use is settled, and how it was settled is worth
+keeping. OIDC was chosen in day 29 and nothing was ever found wrong with it;
+what was wrong sat downstream, where the head commit of every pull request
+was recorded on branch main although --branch was sent and codecov/project
+arrived on none of them. Authentication was the one difference from a working
+repository that had not been varied, so the token path ran once in day 34 and
+moved nothing: on head 36d6f0a the upload was accepted and patch arrived, the
+branch was still main, and project was absent there and on merge commit
+4157df8. The means neither loses the branch nor withholds the status, so the
+cause is outside this repository and the facts are complete enough to file.
+OIDC is back because it rotates no secret. Both means stay allowed below,
+because what the assertion there pins is the shape that carried the swap in
+both directions -- the job asks for exactly what its means needs -- and not
+which means won.
 
 fail_ci_if_error is on deliberately. It means a Codecov outage reds this job
 and, with the required checks on main, blocks merges until it clears. That is
@@ -107,21 +110,39 @@ def test_the_upload_is_repeated_by_the_matrix_and_narrowed_by_nothing() -> None:
     """One step is not one upload, and the docstring above used to imply it was.
 
     The uploading job runs a version matrix, and the step carries no condition,
-    so the report is posted once per entry -- four times per commit today, each
-    an anonymous session of the same measurement, each now declaring the same
-    pull request through override_pr. Codecov merges sessions on a commit, so
-    the count has never been visible from the outside and nothing here claims
-    which one is decisive.
+    so the report is posted once per entry, each an anonymous session of the
+    same measurement, each declaring the same pull request through override_pr.
+    The paragraph that stood here said the count had never been visible from
+    the outside. That was an assumption, and it was wrong: the uploads for a
+    commit are their own resource, separate from its report, and reading it
+    needs no credential. Measured on 2026-09-08 for head 36d6f0a and for merge
+    commit 4157df8 alike -- four uploads each, every one named `CyberAI CI -
+    test`, provider github-actions, state merged, flags empty. The matrix has
+    four entries, so the number sent and the number stored agree, and nothing
+    is being dropped on the way in.
 
-    What this pins is that the multiplicity is deliberate. An `if` narrowing
-    the step to one entry, or a `flags` or `name` telling the sessions apart,
-    are both reasonable answers to four identical uploads, and both change what
-    the paragraph above says. This reds on the day either arrives so the
-    sentence gets rewritten with the change rather than a year later.
+    That agreement is what the count below pins. Widening or narrowing the
+    matrix reds it, and the paragraph then has to be rewritten against a fresh
+    reading rather than left stating a figure that was true once. An `if`
+    narrowing the step to one entry, or a `flags` or `name` telling the
+    sessions apart, are both reasonable answers to four identical uploads, and
+    both change what is written here; they red it too.
     """
     for name, job, step in _uploads():
         combinations = (job.get("strategy") or {}).get("matrix") or {}
         assert combinations, f"{name} uploads outside any matrix; the count above is stale"
+        assert not {"include", "exclude"} & set(combinations), (
+            f"{name} shapes its matrix with include/exclude; the entry count is no "
+            "longer the product of the axes and the reading above cannot be checked"
+        )
+        entries = 1
+        for axis in combinations.values():
+            entries *= len(axis)
+        assert entries == 4, (
+            f"{name} runs {entries} matrix entries and the paragraph above reports "
+            "four uploads measured on the commit; re-read the uploads endpoint and "
+            "rewrite it rather than editing this number"
+        )
         assert "if" not in step, (
             f"{name} narrows the upload with a condition; it no longer runs once per "
             "matrix entry and the reasoning above needs rewriting"
@@ -143,9 +164,9 @@ def test_the_upload_is_a_version_that_can_authenticate() -> None:
 def test_the_upload_identifies_itself_by_one_means_and_asks_for_that_one() -> None:
     """Without this the report is accepted on trust or not at all.
 
-    Two means are allowed because the repository is running an experiment
-    between them, and the shape that has to hold across the swap is that the
-    job asks for exactly what its means needs. OIDC needs id-token: write and
+    Two means are allowed because the repository has swapped between them
+    twice, and the shape that has to hold across a swap is that the job asks
+    for exactly what its means needs. OIDC needs id-token: write and
     a stored token does not, so leaving the permission behind after a swap
     would be a job declaring an identity nothing reads -- which is how the
     comment in ci.yml came to describe an upload that no longer worked that
