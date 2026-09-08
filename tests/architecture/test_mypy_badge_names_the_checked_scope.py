@@ -86,3 +86,41 @@ def test_rewriting_a_current_badge_leaves_the_file_alone(tmp_path) -> None:
     before = copy.read_bytes()
     assert tool.rewrite(tool.claimed(copy), copy) is False
     assert copy.read_bytes() == before
+
+
+def test_the_post_states_the_ratio_the_badge_states() -> None:
+    """The post is where an outside reader meets this number first."""
+    tool = _badge_tool()
+    post, badge = tool.claimed_in_post(), tool.claimed()
+    assert post == badge, (
+        f"the launch post says {post[0]}/{post[1]} and the README badge says "
+        f"{badge[0]}/{badge[1]}. Run scripts/mypy_badge.py rather than editing either."
+    )
+
+
+def test_the_post_writer_writes_the_ratio_the_post_reader_reads(tmp_path) -> None:
+    tool = _badge_tool()
+    copy = tmp_path / "launch-post-draft.md"
+    shutil.copy(tool.POST, copy)
+    assert tool.rewrite_post((1, 2), copy) is True
+    assert tool.claimed_in_post(copy) == (1, 2)
+
+
+def test_rewriting_a_current_post_leaves_the_file_alone(tmp_path) -> None:
+    tool = _badge_tool()
+    copy = tmp_path / "launch-post-draft.md"
+    shutil.copy(tool.POST, copy)
+    before = copy.read_bytes()
+    assert tool.rewrite_post(tool.claimed_in_post(copy), copy) is False
+    assert copy.read_bytes() == before
+
+
+def test_the_ratio_is_found_across_a_line_break(tmp_path) -> None:
+    """Markdown wraps, and a phrase matched on one line only stops being written to."""
+    tool = _badge_tool()
+    copy = tmp_path / "launch-post-draft.md"
+    wrapped = "clean over 7" + chr(10) + "of 9 modules, Apache-2.0." + chr(10)
+    copy.write_text(wrapped, encoding="utf-8")
+    assert tool.claimed_in_post(copy) == (7, 9)
+    assert tool.rewrite_post((3, 4), copy) is True
+    assert tool.claimed_in_post(copy) == (3, 4)

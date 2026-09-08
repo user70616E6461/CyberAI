@@ -29,10 +29,18 @@ import tomllib
 
 _ROOT = pathlib.Path(__file__).resolve().parents[1]
 README = _ROOT / "README.md"
+# The launch post states the same ratio for a reader who never opens the
+# repository. It said the checker was clean on one named module while the
+# scope resolved to ninety-five, because nothing wrote it and nothing read it.
+# One pair of counters, two places the ratio is written.
+POST = _ROOT / "blog" / "launch-post-draft.md"
 _PYPROJECT = _ROOT / "pyproject.toml"
 _PACKAGE = _ROOT / "cyberai"
 
 _BADGE = re.compile(r"badge/mypy-strict%3A%20(\d+)%2F(\d+)%20modules")
+# Matched across line breaks as well, so a reflowed paragraph does not
+# silently stop being written to.
+_POST = re.compile(r"clean over\s+(\d+)\s+of\s+(\d+)\s+modules")
 
 
 def checked() -> int:
@@ -69,6 +77,23 @@ def rewrite(counts: tuple[int, int], readme: pathlib.Path = README) -> bool:
     return True
 
 
+def claimed_in_post(post: pathlib.Path = POST) -> tuple[int, int]:
+    """The ratio the launch post currently states."""
+    match = _POST.search(post.read_text(encoding="utf-8"))
+    assert match, "the launch post carries no typing ratio in the expected shape"
+    return int(match.group(1)), int(match.group(2))
+
+
+def rewrite_post(counts: tuple[int, int], post: pathlib.Path = POST) -> bool:
+    """Put the ratio into the post. True when the file changed."""
+    text = post.read_text(encoding="utf-8")
+    updated = _POST.sub(f"clean over {counts[0]} of {counts[1]} modules", text, count=1)
+    if updated == text:
+        return False
+    post.write_text(updated, encoding="utf-8")
+    return True
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument(
@@ -79,17 +104,19 @@ def main(argv: list[str] | None = None) -> int:
     arguments = parser.parse_args(argv)
     counts = (checked(), package())
     if arguments.check:
-        if claimed() == counts:
-            print(f"badge is current: {counts[0]}/{counts[1]}")
+        stale = [
+            f"{label} says {states[0]}/{states[1]}"
+            for label, states in (("badge", claimed()), ("post", claimed_in_post()))
+            if states != counts
+        ]
+        if not stale:
+            print(f"badge and post are current: {counts[0]}/{counts[1]}")
             return 0
-        print(
-            f"badge says {claimed()[0]}/{claimed()[1]}, the repository holds {counts[0]}/{counts[1]}"
-        )
+        print(f"{', '.join(stale)}; the repository holds {counts[0]}/{counts[1]}")
         return 1
-    if rewrite(counts):
-        print(f"badge set to {counts[0]}/{counts[1]}")
-    else:
-        print(f"badge already said {counts[0]}/{counts[1]}")
+    for label, wrote in (("badge", rewrite(counts)), ("post", rewrite_post(counts))):
+        verb = "set to" if wrote else "already said"
+        print(f"{label} {verb} {counts[0]}/{counts[1]}")
     return 0
 
 
