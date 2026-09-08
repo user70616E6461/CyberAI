@@ -1,15 +1,15 @@
 # Typing scope
 
-`mypy --strict` reads 95 of 170 modules in the package. The other 75 hold 289
+`mypy --strict` reads 97 of 170 modules in the package. The other 73 hold 285
 errors and are not checked.
 
 Not checked is stronger than it sounds, and the boundary is the reason. Of
-the 95 modules in the scope, 19 import a module outside it at module level,
-and between them they reach 26 such modules. mypy follows those imports to
+the 97 modules in the scope, 21 import a module outside it at module level,
+and between them they reach 28 such modules. mypy follows those imports to
 resolve names and does not report what it finds there: measured by appending
 an unannotated function to `cyberai/core/config.py`, which is outside the
 scope and imported from inside it, running with a cold cache, and getting
-`Success: no issues found in 95 source files` all the same. So a name
+`Success: no issues found in 97 source files` all the same. So a name
 crossing the boundary is typed by a module nothing checks, and adding a
 module to the scope costs its import closure rather than its own error count
 -- `mypy` on three single-error modules alone reports 90 errors across 26
@@ -25,6 +25,16 @@ inferred value type of the dict is their join, and the join is `object`.
 Annotating the factories' return type does not move it -- measured, the error
 survives that -- and annotating the dict does. The three factory modules came
 in behind it, named by the drift step once the call site stopped hiding them.
+
+Two more arrived without being chosen. `cyberai/cli/mcp_scan.py` and
+`cyberai/cli/web3_audit.py` pass `config.output_dir`, a `Path`, to a parameter
+that was declared `str`; widening that declaration to what its callers pass
+made both modules clean, and the drift step named them the same day. They cost
+nothing to take: a cold run reports `Success` on 97 rather than 95, the error
+total outside the scope is unchanged at 285, and the drift is none. The
+crossing counts moved with them, from 19 modules reaching 26 to 21 reaching
+28, which is the price rule the paragraph above states, paid and measured
+rather than assumed.
 
 ## How the set was drawn
 
@@ -53,8 +63,8 @@ mypy --strict --python-version 3.11 --ignore-missing-imports cyberai
 
 The cache purge is not decoration. A scoped run that reuses a cache left by a
 wider run re-emits errors for modules outside the scope, and reports them as
-if the declared set were dirty. Measured: cold cache gives `Success` on 95
-modules, the same command after a full-package run gives 234 errors in 51
+if the declared set were dirty. Measured: cold cache gives `Success` on 97
+modules, the same command after a full-package run gives 239 errors in 54
 files, and every one of those files lies outside the scope.
 
 `scripts/typing_scope_drift.py` runs the same partition without the hazard.
@@ -65,7 +75,7 @@ wide run a cache directory of its own instead of purging the shared one.
 ## What the numbers depend on
 
 The partition moves with the checker. Measured on mypy 1.19.1 the clean side
-holds 95 modules; a later release moved it by one module in the other
+holds 97 modules; a later release moved it by one module in the other
 direction. The dev extra therefore bounds the checker rather than naming a
 floor and admitting every future release.
 
@@ -88,7 +98,7 @@ the tests installs no stubs at all.
 
 ## The unchecked side
 
-Six modules carry roughly a third of the 289 errors:
+Six modules carry roughly a third of the 285 errors:
 
 | Module | Errors |
 |---|---|
